@@ -1,6 +1,5 @@
 %synthetic data 
 nb = np*nn; %number of observations
-% tdW = sChange; %true dW
 
 %% Network parameters
 k = 2;
@@ -52,6 +51,13 @@ end
 rf = Rate_Novel;
 C = BinConn;
 
+% add input noise
+if input_noise
+    input_noise_level = 0.1;
+    rf = rf + input_noise_level*randn(size(rf));
+end
+input_noise_level = 0.1;
+rf = rf + input_noise_level*randn(size(rf));
 
 % sample part of the observations
 % vb stands for valid observation, nvb is the number of valid observations
@@ -64,37 +70,48 @@ h = h(vb_index,:);
 
 
 % using Gaussian Regression
+% initialize parameter
+sigma = sqrt(abs(mean(h))/(nn*cd*meanRate));
+l = 50;
+seps = 0.01; %\sigma_\eps
+noise_mu = 0.1;
+seps_neuron = 0.001; % seps_neuron is the noise param for the original map (instead of the affine one)
+
+% Construct the giant covariance matrix, h is affine observation
+% x is synaptic plasticity rule
+%  hh   hx 
+%  xh   xx
+% if there is input noise we want to obtain analytical gradient first 
+% so we need the following covariance matrix
+%  hh   hg
+%  gh   gg
+
+if input_noise
+    hh = Kgen(sigma, l, seps_neuron, vb_index, C, rf);
+    hh = hh+diag(seps^2*ones(length(hh),1));
+    K = hh;
+    alpha = generalizedMinimalResidualMethod(K, h-noise_mu);
+    % cov(h, grad)
+    hg = hggen(sigma, l, vb_index, C, rf, nent*2);
+    postgrad =hg'*alpha;
+    postgrad = reshape(postgrad, 2, nent);
+    %initial input noise level
+    innoise = 0.1;
+end
+
 % hyperparameter inference
 model_selection_lbgfs
 
-% Construct the giant covariance matrix, h is affine observation
-%  hh   hx 
-%  xh   xx
-
-%upper right
-hx = hxgen(sigma, l, vb_index, C, rf, nent); 
-
-%upper left
-K = Kgen(sigma, l, seps_neuron, vb_index, C, rf);
-hh = K+diag(seps^2*ones(length(K),1));
-
-%lower left
-xh = hx';
-
-K = hh;
-Ks = hx;
-% Kss = xx;
-
-
-% calculate posterior
-try
-    L = chol(K)';
-catch
-    L = chol(nearestSPD(K))';
+% calculate posterior mean
+if input_noise
+    hh = Kgen(sigma, l, seps_neuron, vb_index, C, rf, innoise, postgrad);
+else
+    hh = Kgen(sigma, l, seps_neuron, vb_index, C, rf);
 end
-alpha = generalizedMinimalResidualMethod(K, h);
-%     v = L\Ks;
-%     K_pos = Kss - v'*v; %posterior variance 
+hh = hh+diag(seps^2*ones(length(hh),1));
+K = hh;
+Ks = hxgen(sigma, l, vb_index, C, rf, nent); 
+alpha = generalizedMinimalResidualMethod(K, h-noise_mu);
 mu_pos =Ks'*alpha;
 ret = reshape(mu_pos, nf, nf);
 
@@ -115,13 +132,22 @@ function hx = hxgen(sigma, l, vb_index, C, rf, nent)
    end
 end
 
-function ret = isc(r1, r2, cut) %if in the same cluster
-    ret = 0;
-    for i = 1:length(cut)-1
-        if(r1>=cut(i)&&r2>=cut(i)&&r1<cut(i+1)&&r2<cut(i+1))
-            ret = 1;
+function hg = hggen(sigma, l, vb_index, C, rf, nent)
+    nvb = length(vb_index);
+    hg = zeros(nvb, nent);
+    for i = 1:nvb
+        for j = 1:2:nent
+            npost1 = vb_index(i); % index of post-synaptic neuron 1
+            rpost1 = rf(npost1); % firing rate of post-synaptic neuron 1
+            rpre1 = rf(C(npost1,:));
+            [rpre2, rpost2] = unvec((j+1)/2, 50);
+            for m = 1:length(rpre1)
+                dist = (rpost1 - rpost2)^2+(rpre1(m) - rpre2)^2;
+                hg(i,j) = hg(i,j) + sigma^2*exp(-dist/(2*l^2))*rpre1(m)...
+                                                     *(rpre1(m)-rpre2)/l^2;
+                hg(i,j+1) = hg(i,j+1)+sigma^2*exp(-dist/(2*l^2))*rpre1(m)...
+                                                     *(rpost1-rpost2)/l^2;
+            end
         end
     end
 end
-
-

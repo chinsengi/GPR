@@ -6,9 +6,12 @@ for paramno = 1:1
     if paramno == 2
         continue
     end
-    result_1 = squeeze(result_rel(paramno+1, 1:2, 2:10, 1:100));
-    result_2 = squeeze(result_reg_rel3(paramno+1,1:2, 2:10, 1:100));
-    result_3 = squeeze(result_reg_rel4(paramno+1,1:2, 2:10, 1:100));
+    nsamples = 20;
+    result_1 = squeeze(result_rel_input_corrected(paramno+1, 1:2, 2:10, 1:nsamples));
+%     result_1 = squeeze(result_rel_input_vanilla(paramno+1, 1:2, 2:10, 1:nsamples));
+%     result_1 = squeeze(result_rel(paramno+1, 1:2, 2:10, 1:nsamples));
+    result_2 = squeeze(result_reg_rel3(paramno+1,1:2, 2:10, 1:nsamples));
+    result_3 = squeeze(result_reg_rel4(paramno+1,1:2, 2:10, 1:nsamples));
 %     result_2 = squeeze(mean_diff(paramno+1, 1:2, 1:15, :));
     x = 20:10:100;
     savedir = 'C:\Users\Sengi\Desktop\lim\report\presentation';
@@ -30,15 +33,15 @@ for paramno = 1:1
         saveas(gcf, fullfile(savedir, fname), 'png');
         hold off
         
-        method = 'reg3';
-        figure('Renderer', 'painters', 'Position', [10 10 900 1200])
-        data = squeeze(result_2(i, :, :));
-        boxplot(data', x);
-        hold on;
-        title(sprintf(strcat(method,' %d neurons param %d'), nnlist(i), paramno));
-        xlabel('# observations');
-        ylabel('relative error');
-        fname = strcat(method, '_', string(nnlist(i)), 'nn_p', string(paramno), '_rel');
+%         method = 'reg3';
+%         figure('Renderer', 'painters', 'Position', [10 10 900 1200])
+%         data = squeeze(result_2(i, :, :));
+%         boxplot(data', x);
+%         hold on;
+%         title(sprintf(strcat(method,' %d neurons param %d'), nnlist(i), paramno));
+%         xlabel('# observations');
+%         ylabel('relative error');
+%         fname = strcat(method, '_', string(nnlist(i)), 'nn_p', string(paramno), '_rel');
 %         ylevels = yticks();
 %         if ylevels(2) - ylevels(1)> 0.1
 %          yticks(ylevels(1):0.1:ylevels(end));
@@ -46,15 +49,15 @@ for paramno = 1:1
         saveas(gcf, fullfile(savedir, fname), 'png');
         hold off
         
-        method = 'reg4';
-        figure('Renderer', 'painters', 'Position', [10 10 900 1200])
-        data = squeeze(result_3(i, :, :));
-        boxplot(data', x);
-        hold on;
-        title(sprintf(strcat(method,' %d neurons param %d'), nnlist(i), paramno));
-        xlabel('# observations');
-        ylabel('relative error');
-        fname = strcat(method, '_', string(nnlist(i)), 'nn_p', string(paramno), '_rel');
+%         method = 'reg4';
+%         figure('Renderer', 'painters', 'Position', [10 10 900 1200])
+%         data = squeeze(result_3(i, :, :));
+%         boxplot(data', x);
+%         hold on;
+%         title(sprintf(strcat(method,' %d neurons param %d'), nnlist(i), paramno));
+%         xlabel('# observations');
+%         ylabel('relative error');
+%         fname = strcat(method, '_', string(nnlist(i)), 'nn_p', string(paramno), '_rel');
 %         ylevels = yticks();
 %         if ylevels(2) - ylevels(1)> 0.1
 %          yticks(ylevels(1):0.1:ylevels(end));
