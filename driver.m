@@ -23,7 +23,7 @@ dim = [nf,nf];
 nent = prod(dim);
 sf = dim(1)/50; %scale factor
 sChange = zeros(dim);
-input_noise = false; % whether input noise is taken into consideration
+input_noise = true; % whether input noise is taken into consideration
 
 for paramno = 1:1
     for wc = 2:2
@@ -63,20 +63,22 @@ for paramno = 1:1
                                                             (tmp- meanRate));
             sChange = X;
             truncX = X(:, 5:end);
+        else
+            heteroseps = false;
         end
         
         nn = nnlist(wc);
         np = 1;
         Xtrue = X;
         X = 1/(nn*cd)*(X-0.5)/.5;
-        for trial = 1:20
+        for trial = 1:50
             %set seed
-            seed = randi(100000);
-            save_seed(paramno+1, trial, wc) = seed;
-            save('save_seed', 'save_seed');
-            seed = save_seed(paramno+1, trial, wc);
+%             seed = randi(100000);
+%             save_seed(paramno+1, trial, wc) = seed;
+%             save('save_seed', 'save_seed');
+%             seed = save_seed(paramno+1, trial, wc);
 %             seed = 72155;
-            rng(seed);
+%             rng(seed);
 
             % add structured noise
             for i = 1:nf
@@ -97,6 +99,7 @@ for paramno = 1:1
                 else 
 %                     result_rel_input_vanilla(paramno+1, wc, nvb/10, trial) = norm(ret(:) - X(:))/norm(X(:));
                     result_rel_input_corrected(paramno+1, wc, nvb/10, trial) = norm(ret(:) - X(:))/norm(X(:));
+%                     result_rel(paramno+1, wc, nvb/10, trial) = norm(ret(:) - X(:))/norm(X(:));
                     result_mse(paramno+1, wc, nvb/10, trial) = immse(ret,X);
                     save('result_rel_input_corrected', 'result_rel_input_corrected');
 %                     save('result_rel_input_vanilla', 'result_rel_input_vanilla');

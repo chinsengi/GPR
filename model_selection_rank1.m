@@ -2,9 +2,12 @@
 sigma = sqrt(abs(mean(h))/(nn*cd*meanRate));
 l = 7e-4;
 hprime = sqrt(1/l); %name h is used for the data
-seps = 0.1*ones(nvb,1); %\sigma_\eps
+seps = 0.1; %\sigma_\eps
+if heteroseps
+    seps = seps*ones(nvb,1);
+end
 noise_mu = 1;
-seps_neuron = 0*ones(nf,nf);
+seps_neuron = 0;
 logp = -inf;
 
 ALPHA = 1.1;
@@ -37,7 +40,7 @@ x(1) = {sigma}; x(2) = {seps}; x(3) = {hprime}; x(4) = {noise_mu}; x(5) = {seps_
 %% training hyperparameter
 for cycle = 1:1
     psig = 0; pseps = 0; phprime = 0; pnmu = 0; psn = 0;
-    step_size = 0.00001;
+    step_size = 0.0001;
     brake = false;
     for itr = 1:300  
         old_x = x;
@@ -55,7 +58,7 @@ for cycle = 1:1
         x(4) = {noise_mu}; x(5) = {seps_neuron};
         
         % gradient calculation
-        [K, Kl, Ksn] = Kgen(sigma, l, vb_index, C, rf, seps_neuron, nf);
+        [K, Kl, Ksn] = Kgen(sigma, l, seps_neuron, vb_index, C, rf);
         [psig, pseps, phprime, pnmu, psn, invK, L, K] = grad_f(sigma, hprime, seps, noise_mu, h, K, Kl, Ksn, heteroseps);
 
         %calculate the log probability
@@ -96,10 +99,10 @@ for cycle = 1:1
         end          
     end
 end
+l = hprime;
 
 function [psig, pseps, phprime, pnmu, psn, invK, L, K] = grad_f(sigma, hprime, seps, noise_mu, h, K, Kl, Ksn, heteroseps)
     Ksn_size = size(Ksn);
-    nf = Ksn_size(3);
     % calculate K for this round of update
     trueK = K;
     K = K + diag(seps.^2);
@@ -128,7 +131,7 @@ function [psig, pseps, phprime, pnmu, psn, invK, L, K] = grad_f(sigma, hprime, s
     pnmu = sum((h'-noise_mu)*invK);
 
     %partial derivative for seps_neuron
-    psn = zeros(nf, nf);
+    psn = 0;
 %     for i = 1:nf
 %         for j = 1:nf
 %             psn(i,j) = trace(ami*Ksn(:,:, i,j));

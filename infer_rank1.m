@@ -56,8 +56,8 @@ if input_noise
     input_noise_level = 0.1;
     rf = rf + input_noise_level*randn(size(rf));
 end
-input_noise_level = 0.1;
-rf = rf + input_noise_level*randn(size(rf));
+% input_noise_level = 0.1;
+% rf = rf + input_noise_level*randn(size(rf));
 
 % sample part of the observations
 % vb stands for valid observation, nvb is the number of valid observations
@@ -73,9 +73,12 @@ h = h(vb_index,:);
 % initialize parameter
 sigma = sqrt(abs(mean(h))/(nn*cd*meanRate));
 l = 50;
-seps = 0.01; %\sigma_\eps
-noise_mu = 0.1;
-seps_neuron = 0.001; % seps_neuron is the noise param for the original map (instead of the affine one)
+seps = 0.1;
+if heteroseps
+    seps = seps*ones(nvb,1); %\sigma_\eps
+end
+noise_mu = 1;
+seps_neuron = 0.05; % seps_neuron is the noise param for the original map (instead of the affine one)
 
 % Construct the giant covariance matrix, h is affine observation
 % x is synaptic plasticity rule
@@ -100,7 +103,8 @@ if input_noise
 end
 
 % hyperparameter inference
-model_selection_lbgfs
+% model_selection_lbgfs
+% model_selection_rank1
 
 % calculate posterior mean
 if input_noise
@@ -108,10 +112,16 @@ if input_noise
 else
     hh = Kgen(sigma, l, seps_neuron, vb_index, C, rf);
 end
-hh = hh+diag(seps^2*ones(length(hh),1));
+if heteroseps
+    hh = hh + diag(seps.^2);
+else
+    hh = hh+diag(seps^2*ones(length(hh),1));
+end
 K = hh;
 Ks = hxgen(sigma, l, vb_index, C, rf, nent); 
 alpha = generalizedMinimalResidualMethod(K, h-noise_mu);
+% L = chol(nearestSPD(K))';
+% alpha = L'\(L\h);
 mu_pos =Ks'*alpha;
 ret = reshape(mu_pos, nf, nf);
 

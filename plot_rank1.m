@@ -1,12 +1,12 @@
-load('result_reg_rel3');
-load('result_reg_rel4');
-load('result_rel')
+% load('result_reg_rel3');
+% load('result_reg_rel4');
+% load('result_rel')
 nnlist = [200, 500, 1000];
 for paramno = 1:1
     if paramno == 2
         continue
     end
-    nsamples = 20;
+    nsamples = 50;
     result_1 = squeeze(result_rel_input_corrected(paramno+1, 1:2, 2:10, 1:nsamples));
 %     result_1 = squeeze(result_rel_input_vanilla(paramno+1, 1:2, 2:10, 1:nsamples));
 %     result_1 = squeeze(result_rel(paramno+1, 1:2, 2:10, 1:nsamples));
@@ -17,7 +17,7 @@ for paramno = 1:1
     savedir = 'C:\Users\Sengi\Desktop\lim\report\presentation';
     for i = 2:2
         %plot relative error
-        method = 'gpr';
+        method = 'gpr input corrected';
         figure('Renderer', 'painters', 'Position', [10 10 900 1200])
         data = squeeze(result_1(i, :, :));
         boxplot(data', x);
