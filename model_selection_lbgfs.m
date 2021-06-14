@@ -5,8 +5,9 @@ if input_noise
     X0 = [X0; log(innoise)];
 end
 
-constrained = true;
-if constrained
+fval = grad_f(X0, h, vb_index, C, rf, heteroseps, postgrad)
+optmethod = 2;
+if optmethod ==1
     options = optimoptions('fmincon','Algorithm','interior-point',...
         'SpecifyObjectiveGradient',true,...
         'Display', 'iter',...
@@ -16,7 +17,7 @@ if constrained
     ub = 10*ones(size(X0));
     [x_min, fval, exitflag, output] = fmincon(loss,X0,[],[],[],[],lb, ub,[], options);
     [sigma, l, seps, noise_mu, seps_neuron, innoise] = extract_param(x_min, nvb, heteroseps);
-else
+elseif optmethod == 2
     options = optimoptions('fminunc','Algorithm','quasi-newton',...
         'SpecifyObjectiveGradient',true,...
         'Display', 'off',...
@@ -26,8 +27,10 @@ else
         'HessUpdate', 'bfgs');
     [x_min, fval, exitflag, output] = fminunc(loss,X0, options);
     [sigma, l, seps, noise_mu, seps_neuron, innoise] = extract_param(x_min, nvb, heteroseps);
+else
+    fval = grad_f(X0, h, vb_index, C, rf, heteroseps, postgrad);
 end
-logp = -fval;
+logp = -fval
 
 function [f, g] = grad_f(X, h, vb_index, C, rf, heteroseps, postgrad)
     nvb = length(vb_index);
