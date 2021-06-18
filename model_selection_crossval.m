@@ -1,3 +1,4 @@
+% model selection using cross validation 
 loss = @(X)grad_f(X, h, vb_index, C, rf, heteroseps);
 X0 = log([sigma; l; seps; noise_mu; seps_neuron]);
 if input_noise
@@ -13,17 +14,17 @@ if optmethod ==1
         'Display', 'iter',...
         'CheckGradients', false,...
         'FiniteDifferenceType', 'central');
-    lb = -10*ones(size(X0));
-    ub = 10*ones(size(X0));
+    lb = -10*ones(size(X0)); %lower bound
+    ub = 10*ones(size(X0)); %upper bound
     [x_min, fval, exitflag, output] = fmincon(loss,X0,[],[],[],[],lb, ub,[], options);
     [sigma, l, seps, noise_mu, seps_neuron, innoise] = extract_param(x_min, nvb, heteroseps);
 elseif optmethod == 2
     options = optimoptions('fminunc','Algorithm','quasi-newton',...
         'SpecifyObjectiveGradient',true,...
-        'Display', 'off',...
+        'Display', 'iter-detailed',...
         'CheckGradients', false,...
         'FiniteDifferenceType', 'central',...
-        'MaxFunctionEvaluations', 1e5,...
+        'MaxFunctionEvaluations', 500,...
         'HessUpdate', 'bfgs');
     [x_min, fval, exitflag, output] = fminunc(loss,X0, options);
     [sigma, l, seps, noise_mu, seps_neuron, innoise] = extract_param(x_min, nvb, heteroseps);
@@ -50,51 +51,58 @@ function [f, g] = grad_f(X, h, vb_index, C, rf, heteroseps, postgrad)
     else
         K = K + diag(seps^2*ones(length(K),1));
     end
-    if any(isnan(K(:))) || any(isinf(K(:)))
-        K(isnan(K)) = 0;
-        K(isinf(K)) = 0;
-    end
     try
         L = chol(K)';
     catch
         L = chol(nearestSPD(K))';
     end
-    beta = L\(h - noise_mu);
-    theta = 1;
-    f = 0.5*(beta'*beta)+sum(log(diag(L)))/theta;
-    
+    invK = inv_chol(L);
+    alpha = generalizedMinimalResidualMethod(K, h-noise_mu);
+    dinvK = diag(invK);
+    diff = alpha./dinvK-noise_mu;
+    f = -0.5*sum(log(dinvK))+ sum(diff.^2.*dinvK)/2;  
+%     f = -0.5*sum(log(dinvK))+ sum(diff.^2.*dinvK)/2;
     if ( nargout > 1 )
-        invK = inv_chol(L);
-        alpha = generalizedMinimalResidualMethod(K, h-noise_mu);
-        aat = alpha*alpha';
-        ami = aat - invK/theta;
-
+        %intermediate function for partial derivative calculation
+        derivTmp = @(ztheta)...
+            (alpha-noise_mu*dinvK).*(ztheta*alpha)...
+            - 0.5*(1+(alpha.^2-(noise_mu*dinvK).^2)./dinvK).*diag(ztheta*invK);
+        
         %calculate partial derivative for sigma
-        psig = 0.5*trace(ami*Ksig);
-
+        zsig = invK*Ksig;
+        psig = derivTmp(zsig);
+        psig = sum(psig./dinvK);
+        
         %partial derivative for \sigma_\eps
         if heteroseps
-            pseps = seps.*diag(ami);
+            error('hetero noise is not implemented for cross validation');
         else 
-            pseps = seps*trace(ami);
+            zseps = 2*seps*invK;
+            pseps = derivTmp(zseps);
+            pseps = sum(pseps./dinvK);
         end
 
         %partial derivative for l
-        pl = 0.5*trace(ami*Kl);
-
+        zl = invK*Kl;
+        pl = derivTmp(zl);
+        pl = sum(pl./dinvK);
+        
         %partial derivative for noise_mu
-        pnmu = sum((h'-noise_mu)*invK);
+        pnmu = sum(alpha - noise_mu*dinvK);
 
         %partial derivative for seps_neuron
-        psn = 0.5*trace(ami*Ksn);
+        zsn = invK*Ksn;
+        psn = derivTmp(zsn);
+        psn = sum(psn./dinvK);
         
         %partial derivative for input noise variance
         if input_noise
+            error('input noise not implemented for cross validation')
             pinnoise = innoise*trace(ami*gtg);
             g = [psig; pl; pseps; pnmu; psn; pinnoise];
         else
-            g = [psig; pl; pseps; pnmu; psn];
-%             g = [0; 0; pseps; 0; 0];
+%             g = [psig; pl; pseps; pnmu; psn];
+            g = [0; 0; 0; 0; 0];
         end
         g = -g.*exp(X);
     end

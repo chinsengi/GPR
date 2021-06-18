@@ -48,7 +48,7 @@ else
 end
 
 
-rf = Rate_Novel;
+rf = Rate_Fam;
 C = BinConn;
 
 % add input noise
@@ -63,7 +63,7 @@ end
 % vb stands for valid observation, nvb is the number of valid observations
 vb_index = randperm(nb);
 vb_index = vb_index(1:nvb);
-h = DelW*Rate_Novel + WRec_Novel*Diff_Rate; % + DelW*Diff_Rate;
+h = DelW*Rate_Fam + WRec_Novel*Diff_Rate;% + DelW*Diff_Rate;
 h = h(vb_index,:);
 % h = h*10;
 % h = h - mean(h)*mean(StrengthConn, 'all')*nn*cd/meanRate; % since \sum W\Del r is normally distributed
@@ -71,13 +71,14 @@ h = h(vb_index,:);
 
 % using Gaussian Regression
 % initialize parameter
-sigma = sqrt(abs(mean(h))/(nn*cd*meanRate));
-l = 50;
-seps = 0.1;
-if heteroseps
-    seps = seps*ones(nvb,1); %\sigma_\eps
-end
 noise_mu = 1;
+% sigma = sqrt(abs(mean(h) - noise_mu)/(nn*cd*meanRate));
+sigma = 0.03;
+l = 40;
+seps = 0.01;
+if heteroseps
+    seps = seps*ones(nvb,1); %\sigma_\epsilon
+end
 seps_neuron = 0.05; % seps_neuron is the noise param for the original map (instead of the affine one)
 
 % Construct the giant covariance matrix, h is affine observation
@@ -104,7 +105,7 @@ end
 
 % hyperparameter inference
 % model_selection_lbgfs
-% model_selection_rank1
+model_selection_crossval
 
 % calculate posterior mean
 if input_noise

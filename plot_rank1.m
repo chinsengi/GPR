@@ -7,17 +7,17 @@ for paramno = 1:1
         continue
     end
     nsamples = 50;
-    result_1 = squeeze(result_rel_input_corrected(paramno+1, 1:2, 2:10, 1:nsamples));
+    result_1 = squeeze(result_rel_cval(paramno+1, 1:2, 2:10, 1:nsamples));
 %     result_1 = squeeze(result_rel_input_vanilla(paramno+1, 1:2, 2:10, 1:nsamples));
 %     result_1 = squeeze(result_rel(paramno+1, 1:2, 2:10, 1:nsamples));
-    result_2 = squeeze(result_reg_rel3(paramno+1,1:2, 2:10, 1:nsamples));
-    result_3 = squeeze(result_reg_rel4(paramno+1,1:2, 2:10, 1:nsamples));
+%     result_2 = squeeze(result_reg_rel3(paramno+1,1:2, 2:10, 1:nsamples));
+%     result_3 = squeeze(result_reg_rel4(paramno+1,1:2, 2:10, 1:nsamples));
 %     result_2 = squeeze(mean_diff(paramno+1, 1:2, 1:15, :));
     x = 20:10:100;
     savedir = 'C:\Users\Sengi\Desktop\lim\report\presentation';
     for i = 2:2
         %plot relative error
-        method = 'gpr input corrected';
+        method = 'gpr extra term with MAP';
         figure('Renderer', 'painters', 'Position', [10 10 900 1200])
         data = squeeze(result_1(i, :, :));
         boxplot(data', x);

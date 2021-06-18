@@ -23,7 +23,7 @@ dim = [nf,nf];
 nent = prod(dim);
 sf = dim(1)/50; %scale factor
 sChange = zeros(dim);
-input_noise = true; % whether input noise is taken into consideration
+input_noise = false; % whether input noise is taken into consideration
 
 for paramno = 1:1
     for wc = 2:2
@@ -79,16 +79,16 @@ for paramno = 1:1
 %             seed = save_seed(paramno+1, trial, wc);
 %             seed = 72155;
 %             rng(seed);
-
             % add structured noise
             for i = 1:nf
                 for j = 1:nf
-                    sChange(i,j) = sqrt(dWvar(i*(100/nf),j*(100/nf)))*randn()+Xtrue(i,j);
+                    sChange(i,j) = sqrt(dWvar(i*(100/nf),j*(100/nf)))*randn()...
+                                                               +Xtrue(i,j);
+%                     sChange(i,j) = Xtrue(i,j);
                 end
             end
             sChange = 1/(nn*cd)*(sChange - 0.5)/.5;
-            
-            for nvb = 10:10:100%number of valid observations
+            for nvb = 50:10:50 %number of valid observations
                 infer_rank1;  
                 if truncate 
                     ret = ret(:, 5:end);
@@ -98,15 +98,14 @@ for paramno = 1:1
                     save('result_mse_trunc', 'result_mse_trunc');
                 else 
 %                     result_rel_input_vanilla(paramno+1, wc, nvb/10, trial) = norm(ret(:) - X(:))/norm(X(:));
-                    result_rel_input_corrected(paramno+1, wc, nvb/10, trial) = norm(ret(:) - X(:))/norm(X(:));
+                    result_rel_cval(paramno+1, wc, nvb/10, trial) = norm(ret(:) - X(:))/norm(X(:));
 %                     result_rel(paramno+1, wc, nvb/10, trial) = norm(ret(:) - X(:))/norm(X(:));
                     result_mse(paramno+1, wc, nvb/10, trial) = immse(ret,X);
-                    save('result_rel_input_corrected', 'result_rel_input_corrected');
+%                     save('result_rel_input_corrected', 'result_rel_input_corrected');
 %                     save('result_rel_input_vanilla', 'result_rel_input_vanilla');
 %                     save('result_rel', 'result_rel');
 %                     save('result_mse', 'result_mse');
                 end
-%                 ret = 1/(nn*cd)*(ret - 0.5)/.5;
                 norm(ret(:) - X(:))/norm(X(:))
                 
 %                 tmp = WRec_Novel*Diff_Rate;
