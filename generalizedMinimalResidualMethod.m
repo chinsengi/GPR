@@ -2,7 +2,11 @@ function x = generalizedMinimalResidualMethod(A, b)
     if condest(A)>1e6
         tol = 1e-11;
         maxit = 200;
-        [P,R,C] = equilibrate(A);
+        try
+            [P,R,C] = equilibrate(A);
+        catch
+            P = eye(length(A)); R = P; C = R;
+        end
         B = R*P*A*C;
         d = R*P*b;
         [x,fl,rr,it,rv] = gmres(B,d,[],tol,maxit);

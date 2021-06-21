@@ -43,6 +43,7 @@ else
     end 
     WRec_Fam = WRec_Novel + DelW;
     Rate_Fam = (eye(nn) - WRec_Fam)\IExt;
+    Rate_Fam(Rate_Fam<0) = 0;
     %%  Inference on the post-synaptic dependence
     Diff_Rate = Rate_Fam-Rate_Novel;
 end
@@ -63,7 +64,7 @@ end
 % vb stands for valid observation, nvb is the number of valid observations
 vb_index = randperm(nb);
 vb_index = vb_index(1:nvb);
-h = DelW*Rate_Fam + WRec_Novel*Diff_Rate;% + DelW*Diff_Rate;
+h = DelW*Rate_Fam + WRec_Novel*Diff_Rate;
 h = h(vb_index,:);
 % h = h*10;
 % h = h - mean(h)*mean(StrengthConn, 'all')*nn*cd/meanRate; % since \sum W\Del r is normally distributed
@@ -71,11 +72,11 @@ h = h(vb_index,:);
 
 % using Gaussian Regression
 % initialize parameter
-noise_mu = 1;
+noise_mu = 1.2;
 % sigma = sqrt(abs(mean(h) - noise_mu)/(nn*cd*meanRate));
-sigma = 0.03;
+sigma = 0.02;
 l = 40;
-seps = 0.01;
+seps = 0.02;
 if heteroseps
     seps = seps*ones(nvb,1); %\sigma_\epsilon
 end
@@ -104,8 +105,8 @@ if input_noise
 end
 
 % hyperparameter inference
-% model_selection_lbgfs
-model_selection_crossval
+model_selection_MAP
+% model_selection_crossval
 
 % calculate posterior mean
 if input_noise

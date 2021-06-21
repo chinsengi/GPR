@@ -7,21 +7,21 @@ if input_noise
 end
 
 fval = -grad_f(X0, h, vb_index, C, rf, heteroseps)
-optmethod = 2;
+optmethod = 1;
 if optmethod ==1
-    options = optimoptions('fmincon','Algorithm','interior-point',...
+    options = optimoptions('fmincon','Algorithm','sqp',...
         'SpecifyObjectiveGradient',true,...
-        'Display', 'iter',...
+        'Display', 'off',...
         'CheckGradients', false,...
         'FiniteDifferenceType', 'central');
-    lb = -10*ones(size(X0)); %lower bound
-    ub = 10*ones(size(X0)); %upper bound
+    lb = -5*ones(size(X0)); %lower bound
+    ub = 5*ones(size(X0)); %upper bound
     [x_min, fval, exitflag, output] = fmincon(loss,X0,[],[],[],[],lb, ub,[], options);
     [sigma, l, seps, noise_mu, seps_neuron, innoise] = extract_param(x_min, nvb, heteroseps);
 elseif optmethod == 2
     options = optimoptions('fminunc','Algorithm','quasi-newton',...
         'SpecifyObjectiveGradient',true,...
-        'Display', 'iter-detailed',...
+        'Display', 'off',...
         'CheckGradients', false,...
         'FiniteDifferenceType', 'central',...
         'MaxFunctionEvaluations', 500,...
@@ -88,7 +88,7 @@ function [f, g] = grad_f(X, h, vb_index, C, rf, heteroseps, postgrad)
         pl = sum(pl./dinvK);
         
         %partial derivative for noise_mu
-        pnmu = sum(alpha - noise_mu*dinvK);
+        pnmu = sum((alpha - noise_mu*dinvK).*(1+(sum(invK, 2))./dinvK));
 
         %partial derivative for seps_neuron
         zsn = invK*Ksn;
@@ -101,8 +101,8 @@ function [f, g] = grad_f(X, h, vb_index, C, rf, heteroseps, postgrad)
             pinnoise = innoise*trace(ami*gtg);
             g = [psig; pl; pseps; pnmu; psn; pinnoise];
         else
-%             g = [psig; pl; pseps; pnmu; psn];
-            g = [0; 0; 0; 0; 0];
+            g = [psig; pl; pseps; pnmu; psn];
+%             g = [0; 0; 0; 0; 0];
         end
         g = -g.*exp(X);
     end

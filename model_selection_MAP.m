@@ -6,7 +6,7 @@ if input_noise
 end
 
 fval = -grad_f(X0, h, vb_index, C, rf, heteroseps)
-optmethod = 2;
+optmethod = 3;
 if optmethod ==1
     options = optimoptions('fmincon','Algorithm','interior-point',...
         'SpecifyObjectiveGradient',true,...
@@ -25,7 +25,11 @@ elseif optmethod == 2
         'FiniteDifferenceType', 'central',...
         'MaxFunctionEvaluations', 1e5,...
         'HessUpdate', 'bfgs');
-    [x_min, fval, exitflag, output] = fminunc(loss,X0, options);
+    try
+        [x_min, fval, exitflag, output] = fminunc(loss,X0, options);
+    catch
+        x_min = X0;
+    end
     [sigma, l, seps, noise_mu, seps_neuron, innoise] = extract_param(x_min, nvb, heteroseps);
 else
     fval = grad_f(X0, h, vb_index, C, rf, heteroseps);
