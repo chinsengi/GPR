@@ -5,16 +5,16 @@ if input_noise
     X0 = [X0; log(innoise)];
 end
 
-fval = -grad_f(X0, h, vb_index, C, rf, heteroseps)
+fval = -loss(X0);
 optmethod = 3;
 if optmethod ==1
-    options = optimoptions('fmincon','Algorithm','interior-point',...
+    options = optimoptions('fmincon','Algorithm','sqp',...
         'SpecifyObjectiveGradient',true,...
-        'Display', 'iter',...
+        'Display', 'off',...
         'CheckGradients', false,...
         'FiniteDifferenceType', 'central');
-    lb = -10*ones(size(X0));
-    ub = 10*ones(size(X0));
+    lb = -5*ones(size(X0)); %lower bound
+    ub = 5*ones(size(X0)); %upper bound
     [x_min, fval, exitflag, output] = fmincon(loss,X0,[],[],[],[],lb, ub,[], options);
     [sigma, l, seps, noise_mu, seps_neuron, innoise] = extract_param(x_min, nvb, heteroseps);
 elseif optmethod == 2
@@ -32,9 +32,10 @@ elseif optmethod == 2
     end
     [sigma, l, seps, noise_mu, seps_neuron, innoise] = extract_param(x_min, nvb, heteroseps);
 else
-    fval = grad_f(X0, h, vb_index, C, rf, heteroseps);
+    x_min = X0;
+    fval = loss(X0);
 end
-logp = -fval
+logp = -fval;
 tmp = 1;
 
 function [f, g] = grad_f(X, h, vb_index, C, rf, heteroseps, postgrad)

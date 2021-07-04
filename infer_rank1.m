@@ -7,10 +7,9 @@ Rate_Novel = gamrnd(k,meanRate/k,nn,np);
 Rate_Novel(Rate_Novel>50) = 50;
 
 BinConn = (rand(nn)<cd);    % Structural connectivity (it is assumed to be known)
+StrengthConn = 1/(nn*cd)*(2*rand(nn)+4);   % Strength of connection before learning
+WRec_Novel = 1/meanRate*BinConn.*StrengthConn;
 if paramno==0
-    StrengthConn = 1/(nn*cd)*(2*rand(nn)+4);   % Strength of connection before learning
-    WRec_Novel = 1/meanRate*BinConn.*StrengthConn;
-
     IExt = Rate_Novel-WRec_Novel*Rate_Novel;            % External input (assumed to be unchanged with learning)
     %% Synaptic plasticity and firing rate after learning for each pattern
     DelW_Strength = zeros(nn,nn,np);
@@ -29,8 +28,6 @@ if paramno==0
     Diff_Rate = Rate_Fam-Rate_Novel;
 else
     Rate_Novel = ceil(Rate_Novel);
-    StrengthConn = 1/(nn*cd)*(2*rand(nn)+4);   % Strength of connection before learning
-    WRec_Novel = 1/meanRate*BinConn.*StrengthConn;
 
     IExt = Rate_Novel-WRec_Novel*Rate_Novel;            % External input (assumed to be unchanged with learning)
     DelW = zeros(nn);
@@ -72,41 +69,59 @@ h = h(vb_index,:);
 
 % using Gaussian Regression
 % initialize parameter
-noise_mu = 1.2;
-% sigma = sqrt(abs(mean(h) - noise_mu)/(nn*cd*meanRate));
-sigma = 0.02;
-l = 40;
-seps = 0.02;
-if heteroseps
-    seps = seps*ones(nvb,1); %\sigma_\epsilon
+sn_cand = [0.1];
+nm_cand = [1, 2];
+seps_cand = [0.1, 0.2];
+sig_cand = [0.02, 0.05];
+bestlogp = -inf;
+for sn_ind = 1:length(sn_cand)
+    for nm_ind = 1:length(nm_cand)
+        for seps_ind = 1:length(seps_cand)
+            for sig_ind = 1:length(sig_cand)
+                noise_mu = nm_cand(nm_ind);
+                % sigma = sqrt(abs(mean(h) - noise_mu)/(nn*cd*meanRate));
+                sigma = sig_cand(sig_ind);
+                l = 40;
+                seps = seps_cand(seps_ind);
+                if heteroseps
+                    seps = seps*ones(nvb,1); %\sigma_\epsilon
+                end
+                seps_neuron = sn_cand(sn_ind); % seps_neuron is the noise param for the original map (instead of the affine one)
+
+                % Construct the giant covariance matrix, h is affine observation
+                % x is synaptic plasticity rule
+                %  hh   hx 
+                %  xh   xx
+                % if there is input noise we want to obtain analytical gradient first 
+                % so we need the following covariance matrix
+                %  hh   hg
+                %  gh   gg
+
+                if input_noise
+                    hh = Kgen(sigma, l, seps_neuron, vb_index, C, rf);
+                    hh = hh+diag(seps^2*ones(length(hh),1));
+                    K = hh;
+                    alpha = generalizedMinimalResidualMethod(K, h-noise_mu);
+                    % cov(h, grad)
+                    hg = hggen(sigma, l, vb_index, C, rf, nent*2);
+                    postgrad =hg'*alpha;
+                    postgrad = reshape(postgrad, 2, nent);
+                    %initial input noise level
+                    innoise = 0.1;
+                end
+
+                % hyperparameter inference
+                model_selection_crossval
+
+                if logp > bestlogp
+                    param_true = x_min;
+                    bestlogp = logp;
+                end
+            end
+        end
+    end
 end
-seps_neuron = 0.05; % seps_neuron is the noise param for the original map (instead of the affine one)
-
-% Construct the giant covariance matrix, h is affine observation
-% x is synaptic plasticity rule
-%  hh   hx 
-%  xh   xx
-% if there is input noise we want to obtain analytical gradient first 
-% so we need the following covariance matrix
-%  hh   hg
-%  gh   gg
-
-if input_noise
-    hh = Kgen(sigma, l, seps_neuron, vb_index, C, rf);
-    hh = hh+diag(seps^2*ones(length(hh),1));
-    K = hh;
-    alpha = generalizedMinimalResidualMethod(K, h-noise_mu);
-    % cov(h, grad)
-    hg = hggen(sigma, l, vb_index, C, rf, nent*2);
-    postgrad =hg'*alpha;
-    postgrad = reshape(postgrad, 2, nent);
-    %initial input noise level
-    innoise = 0.1;
-end
-
-% hyperparameter inference
-model_selection_MAP
-% model_selection_crossval
+[sigma, l, seps, noise_mu, seps_neuron, innoise] = extract_param(param_true, nvb, heteroseps);
 
 % calculate posterior mean
 if input_noise
@@ -161,5 +176,18 @@ function hg = hggen(sigma, l, vb_index, C, rf, nent)
                                                      *(rpost1-rpost2)/l^2;
             end
         end
+    end
+end
+
+function [sigma, l, seps, noise_mu, sn, innoise] = extract_param(X, nvb, heteroseps)
+    % it's a hack, so that we don't need to know if there is input noise
+    X = [X; 0];
+    X = exp(X);
+    if heteroseps
+        sigma = X(1); l = X(2);
+        seps = X(3:2+nvb);
+        [noise_mu, sn, innoise] = feval(@(x) x{:}, num2cell(X(3+nvb:end)));
+    else
+        [sigma, l, seps, noise_mu, sn, innoise] = feval(@(x) x{:}, num2cell(X));
     end
 end

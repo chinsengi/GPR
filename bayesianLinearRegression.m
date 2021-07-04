@@ -54,32 +54,37 @@ function pred = bayesianLinearRegression(nn, np, meanRate, nvb, cd, sChange, par
     % vb stands for valid observation, nvb is the number of it
     vb_index = randperm(nb);
     vb_index = vb_index(1:nvb);
-    h = DelW*Rate_Novel + WRec_Novel*Diff_Rate; % + DelW*Diff_Rate;
+    h = DelW*Rate_Fam + WRec_Novel*Diff_Rate;
     h = h(vb_index,:);
     X = zeros(nvb, NumPredictors);
     X(:, 1) = 1;
     for i = 1:nvb
         ind = vb_index(i);
-        tmp = [Rate_Novel,... %constant
-            Rate_Novel(ind)*Rate_Novel,... %x
-            Rate_Novel.^2,... %y
-            Rate_Novel(ind)^2*Rate_Novel,...% x^2
-            Rate_Novel.^3,... % y^2
-            Rate_Novel(ind)*(Rate_Novel.^2),... % xy
-            Rate_Novel(ind)^2*(Rate_Novel.^2),... % x^2y
-            Rate_Novel(ind)*(Rate_Novel.^3),... %xy^2
-            Rate_Novel(ind)*(Rate_Novel.^4),... %xy^3
-            Rate_Novel(ind)^2*(Rate_Novel.^3),... %x^2y^2
-            Rate_Novel(ind)^3*(Rate_Novel.^2),... %x^3y
-            Rate_Novel(ind)^3*Rate_Novel,... %x^3
-            Rate_Novel.^4,... %y^3
-            Rate_Novel(ind)^4*Rate_Novel,... %x^4
-            Rate_Novel.^5,... %y^4
+        tmp = [Rate_Fam,... %constant
+            Rate_Novel(ind)*Rate_Fam,... %x
+            Rate_Novel.*Rate_Fam,... %y
+            Rate_Novel(ind)^2*Rate_Fam,...% x^2
+            (Rate_Novel.^2).*Rate_Fam,... % y^2
+            Rate_Novel(ind)*Rate_Novel.*Rate_Fam,... % xy
+            Rate_Novel(ind)^2*Rate_Novel.*Rate_Fam,... % x^2y
+            Rate_Novel(ind)*Rate_Novel.^2.*Rate_Fam,... %xy^2
+            Rate_Novel(ind)*(Rate_Novel.^3).*Rate_Fam,... %xy^3
+            Rate_Novel(ind)^2*(Rate_Novel.^2).*Rate_Fam,... %x^2y^2
+            Rate_Novel(ind)^3*(Rate_Novel).*Rate_Fam,... %x^3y
+            Rate_Novel(ind)^3*Rate_Fam,... %x^3
+            Rate_Novel.^3.*Rate_Fam,... %y^3
+            Rate_Novel(ind)^4*Rate_Fam,... %x^4
+            Rate_Novel.^4.*Rate_Fam... %y^4
             ];
         X(i,2:end) = BinConn(ind,:)*tmp;
     end
     
     noise_mu = 1;
+    X(2:end, :) = X(2:end,:) - X(1:end-1, :);
+    h(2:end) = h(2:end) - h(1:end-1);
+    X = X(2:end, :);
+    h = h(2:end);
+    
     if method == 1
         X = X(:, 3:end);
         InterceptPriorMean = 0;
@@ -108,10 +113,10 @@ function pred = bayesianLinearRegression(nn, np, meanRate, nvb, cd, sChange, par
 %         b = ridge(h,X(:, 2:end), [0.001, 0.01, 0.1, 0.2, 0.5]);
 %         MAPBeta = b(1:end, 5);
         if order == 4
-            b = regress(h-noise_mu, X(:,2:end));
+            b = regress(h, X(:,2:end));
             MAPBeta = b;
         else
-            b = regress(h-noise_mu, X(:,[2:9,13, 14]))';
+            b = regress(h, X(:,[2:9,13, 14]))';
             MAPBeta = [b(1:8), 0,0,0,b(9), b(10),0,0];
         end
     end

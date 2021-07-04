@@ -71,9 +71,9 @@ for paramno = 1:1
         np = 1;
         Xtrue = X;
         X = 1/(nn*cd)*(X-0.5)/.5;
-        for trial = 1:50
+        for trial = 1:20
             %set seed
-%             seed = randi(100000);
+            seed = randi(100000);
 %             save_seed(paramno+1, trial, wc) = seed;
 %             save('save_seed', 'save_seed');
 %             seed = save_seed(paramno+1, trial, wc);
@@ -82,47 +82,45 @@ for paramno = 1:1
             % add structured noise
             for i = 1:nf
                 for j = 1:nf
-                    sChange(i,j) = sqrt(dWvar(i*(100/nf),j*(100/nf)))*randn()...
-                                                               +Xtrue(i,j);
-%                     sChange(i,j) = Xtrue(i,j);
+%                     sChange(i,j) = sqrt(dWvar(i*(100/nf),j*(100/nf)))*randn()...
+%                                                                +Xtrue(i,j);
+                    sChange(i,j) = Xtrue(i,j);
                 end
             end
             sChange = 1/(nn*cd)*(sChange - 0.5)/.5;
-            for nvb = 50:10:50 %number of valid observations
-                infer_rank1;  
-                if truncate 
-                    ret = ret(:, 5:end);
-                    result_rel_trunc(paramno+1, wc, nvb/10, trial) = norm(ret(:) - truncX(:))/norm(truncX(:));
-                    result_mse_trunc(paramno+1, wc, nvb/10, trial) = immse(ret,truncX);
-                    save('result_rel_trunc', 'result_rel_trunc');
-                    save('result_mse_trunc', 'result_mse_trunc');
-                else 
-%                     result_rel_input_vanilla(paramno+1, wc, nvb/10, trial) = norm(ret(:) - X(:))/norm(X(:));
-                    result_rel_cval(paramno+1, wc, nvb/10, trial) = norm(ret(:) - X(:))/norm(X(:));
-%                     result_rel(paramno+1, wc, nvb/10, trial) = norm(ret(:) - X(:))/norm(X(:));
-                    result_mse(paramno+1, wc, nvb/10, trial) = immse(ret,X);
-%                     save('result_rel_input_corrected', 'result_rel_input_corrected');
-%                     save('result_rel_input_vanilla', 'result_rel_input_vanilla');
-%                     save('result_rel', 'result_rel');
-%                     save('result_mse', 'result_mse');
-                end
-                norm(ret(:) - X(:))/norm(X(:))
-                
-%                 tmp = WRec_Novel*Diff_Rate;
-%                 mean_diff(paramno+1, wc, nvb/10, trial) = abs(mean(tmp) - mean(tmp(vb_index)));
-%                 save('mean_diff', 'mean_diff');
-                
-%                 reg_method = 2; % 1 for bayesian, 2 for ordinary MLS
-%                 pred4 = bayesianLinearRegression(nn, np, meanRate, nvb, cd, sChange, paramno, reg_method, seed, 4);
-%                 result_reg_rel4(paramno+1, wc, nvb/10, trial) = ...
-%                     norm(pred4(:) - X(:))/norm(X(:));
-%                 norm(pred4(:) - X(:))/norm(X(:))
-%                 pred3 = bayesianLinearRegression(nn, np, meanRate, nvb, cd, sChange, paramno, reg_method, seed, 3);
-%                 result_reg_rel3(paramno+1, wc, nvb/10, trial) = ...
-%                     norm(pred3(:) - X(:))/norm(X(:));
-%                 norm(pred3(:) - X(:))/norm(X(:))
-%                 save('result_reg_rel3', 'result_reg_rel3');
-%                 save('result_reg_rel4', 'result_reg_rel4');
+            for nvb = 10:10:100 %number of valid observations
+%                 for model_selection_method = 1:3
+                    infer_rank1;  
+                    if truncate 
+                        ret = ret(:, 5:end);
+                        result_rel_trunc(paramno+1, wc, nvb/10, trial) = norm(ret(:) - truncX(:))/norm(truncX(:));
+                        result_mse_trunc(paramno+1, wc, nvb/10, trial) = immse(ret,truncX);
+                        save('result_rel_trunc', 'result_rel_trunc');
+                        save('result_mse_trunc', 'result_mse_trunc');
+                    else 
+                        result_rel_fam(paramno+1, model_selection_method, nvb/10, trial) = norm(ret(:) - X(:))/norm(X(:));
+                        result_logp(paramno+1, model_selection_method, nvb/10, trial) = bestlogp;
+                        result_mse(paramno+1, wc, nvb/10, trial) = immse(ret,X);
+%                         save('result_rel_fam', 'result_rel_fam');
+%                         save('result_logp', 'result_logp');
+    %                     save('result_rel_input_vanilla', 'result_rel_input_vanilla');
+    %                     save('result_rel', 'result_rel');
+    %                     save('result_mse', 'result_mse');
+                    end
+                    norm(ret(:) - X(:))/norm(X(:))
+%                 end
+                %linear regression performance for comparison
+%                     reg_method = 2; % 1 for bayesian, 2 for ordinary MLS
+%                     pred4 = bayesianLinearRegression(nn, np, meanRate, nvb, cd, sChange, paramno, reg_method, seed, 4);
+%                     result_reg_rel4(paramno+1, wc, nvb/10, trial) = ...
+%                         norm(pred4(:) - X(:))/norm(X(:));
+%                     norm(pred4(:) - X(:))/norm(X(:))
+%                     pred3 = bayesianLinearRegression(nn, np, meanRate, nvb, cd, sChange, paramno, reg_method, seed, 3);
+%                     result_reg_rel3(paramno+1, wc, nvb/10, trial) = ...
+%                         norm(pred3(:) - X(:))/norm(X(:));
+%                     norm(pred3(:) - X(:))/norm(X(:))
+%                     save('result_reg_rel3', 'result_reg_rel3');
+%                     save('result_reg_rel4', 'result_reg_rel4');
                 fprintf("paramno = %d, trial = %d nvb = %d\n", paramno, trial, nvb);
             end  
         end
